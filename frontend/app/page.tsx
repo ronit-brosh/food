@@ -123,7 +123,7 @@ export default function Home() {
     return (
       <div className="flex items-center justify-center h-screen bg-brand-bg">
         <div className="text-brand-muted animate-pulse flex flex-col items-center gap-3">
-          <span className="text-5xl">🍳</span>
+          <span className="text-5xl">🧑‍🍳</span>
           <span className="font-semibold">טוען מתכונים...</span>
         </div>
       </div>

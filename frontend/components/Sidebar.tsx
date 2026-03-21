@@ -43,7 +43,7 @@ export default function Sidebar({
       {/* Header */}
       <div className="p-4 border-b border-brand-border bg-brand-bg">
         <h1 className="text-xl font-bold text-brand-text mb-3 flex items-center gap-2">
-          <span className="text-2xl">🍳</span>
+          <span className="text-2xl">🧑‍🍳</span>
           המתכונים שלי
         </h1>
 
