@@ -1,0 +1,63 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+    Runtime: python3.12
+    Environment:
+      Variables:
+        DATABASE_URL: !Ref DatabaseUrl
+        ANTHROPIC_API_KEY: !Ref AnthropicApiKey
+        ALLOWED_ORIGINS: !Ref AllowedOrigins
+
+Parameters:
+  DatabaseUrl:
+    Type: String
+    NoEcho: true
+  AnthropicApiKey:
+    Type: String
+    NoEcho: true
+  AllowedOrigins:
+    Type: String
+    Default: "*"
+
+Resources:
+  RecipesApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins:
+          - "*"
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        AllowHeaders:
+          - "*"
+
+  RecipesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: app.main.handler
+      Events:
+        Api:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref RecipesApi
+            Path: /{proxy+}
+            Method: ANY
+        Root:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref RecipesApi
+            Path: /
+            Method: ANY
+
+Outputs:
+  ApiUrl:
+    Value: !Sub "https://${RecipesApi}.execute-api.${AWS::Region}.amazonaws.com"

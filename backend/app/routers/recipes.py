@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from typing import Optional
 import asyncpg
 from app.database import get_db
 from app.models.schemas import RecipeCreate, RecipeUpdate, RecipeOut, RecipeListItem, RatingIn
+from app.sync import sync_to_production
 
 router = APIRouter()
 
@@ -80,7 +81,7 @@ async def get_recipe(recipe_id: str, conn: asyncpg.Connection = Depends(get_db))
 
 
 @router.post("", response_model=RecipeOut, status_code=201)
-async def create_recipe(data: RecipeCreate, conn: asyncpg.Connection = Depends(get_db)):
+async def create_recipe(data: RecipeCreate, background_tasks: BackgroundTasks, conn: asyncpg.Connection = Depends(get_db)):
     async with conn.transaction():
         row = await conn.fetchrow(
             """
@@ -99,11 +100,12 @@ async def create_recipe(data: RecipeCreate, conn: asyncpg.Connection = Depends(g
                 [(row["id"], lid) for lid in data.label_ids],
             )
     labels_map = await fetch_labels_for_recipes(conn, [row["id"]])
+    background_tasks.add_task(sync_to_production)
     return {**dict(row), "labels": labels_map.get(str(row["id"]), [])}
 
 
 @router.put("/{recipe_id}", response_model=RecipeOut)
-async def update_recipe(recipe_id: str, data: RecipeUpdate, conn: asyncpg.Connection = Depends(get_db)):
+async def update_recipe(recipe_id: str, data: RecipeUpdate, background_tasks: BackgroundTasks, conn: asyncpg.Connection = Depends(get_db)):
     async with conn.transaction():
         row = await conn.fetchrow(
             """
@@ -125,14 +127,16 @@ async def update_recipe(recipe_id: str, data: RecipeUpdate, conn: asyncpg.Connec
                 [(row["id"], lid) for lid in data.label_ids],
             )
     labels_map = await fetch_labels_for_recipes(conn, [row["id"]])
+    background_tasks.add_task(sync_to_production)
     return {**dict(row), "labels": labels_map.get(str(row["id"]), [])}
 
 
 @router.delete("/{recipe_id}", status_code=204)
-async def delete_recipe(recipe_id: str, conn: asyncpg.Connection = Depends(get_db)):
+async def delete_recipe(recipe_id: str, background_tasks: BackgroundTasks, conn: asyncpg.Connection = Depends(get_db)):
     result = await conn.execute("DELETE FROM recipes WHERE id=$1::uuid", recipe_id)
     if result == "DELETE 0":
         raise HTTPException(status_code=404, detail="Recipe not found")
+    background_tasks.add_task(sync_to_production)
 
 
 @router.post("/{recipe_id}/rate", response_model=RecipeOut)

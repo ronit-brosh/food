@@ -1,20 +1,11 @@
 import asyncpg
 from app.config import settings
 
-_pool: asyncpg.Pool | None = None
-
-
-async def init_db():
-    global _pool
-    _pool = await asyncpg.create_pool(settings.database_url, min_size=2, max_size=10)
-
-
-async def close_db():
-    if _pool:
-        await _pool.close()
-
 
 async def get_db() -> asyncpg.Connection:
-    """Dependency: yields a connection from the pool."""
-    async with _pool.acquire() as conn:
+    """Dependency: yields a single connection per request (serverless-safe)."""
+    conn = await asyncpg.connect(settings.database_url)
+    try:
         yield conn
+    finally:
+        await conn.close()

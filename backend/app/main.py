@@ -1,23 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
-from app.database import init_db, close_db
 from app.routers import recipes, labels, admin
 from app.config import settings
+from mangum import Mangum
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    await init_db()
-    yield
-    await close_db()
-
-
-app = FastAPI(
-    title="Recipes API",
-    version="1.0.0",
-    lifespan=lifespan,
-)
+app = FastAPI(title="Recipes API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,3 +22,7 @@ app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+# Lambda handler
+handler = Mangum(app, lifespan="off")

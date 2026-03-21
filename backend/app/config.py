@@ -3,6 +3,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     database_url: str
+    prod_database_url: str = ""
     allowed_origins: str = "http://localhost:3000"
     anthropic_api_key: str = ""
     llm_provider: str = "anthropic"
