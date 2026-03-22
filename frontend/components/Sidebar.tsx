@@ -39,7 +39,7 @@ export default function Sidebar({
   );
 
   return (
-    <aside className="flex flex-col h-full bg-brand-surface border-l border-brand-border w-80 flex-shrink-0 shadow-sm">
+    <aside className="flex flex-col h-full bg-brand-surface border-l border-brand-border w-full md:w-64 lg:w-80 flex-shrink-0 shadow-sm">
       {/* Header */}
       <div className="p-4 border-b border-brand-border bg-brand-bg">
         <h1 className="text-xl font-bold text-brand-text mb-3 flex items-center gap-2">

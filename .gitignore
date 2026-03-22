@@ -13,7 +13,9 @@ env/
 
 # Env files — NEVER commit these
 .env
+.env.*
 backend/.env
+backend/.env.*
 scripts/.env
 frontend/.env.local
 

@@ -20,10 +20,11 @@ interface RecipeDetailProps {
   onUpdate: (updated: Recipe) => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  onBack?: () => void;
   isAdmin?: boolean;
 }
 
-export default function RecipeDetail({ recipe, onUpdate, onEdit, onDelete, isAdmin }: RecipeDetailProps) {
+export default function RecipeDetail({ recipe, onUpdate, onEdit, onDelete, onBack, isAdmin }: RecipeDetailProps) {
   const [rating, setRating] = useState<number | undefined>(recipe.rating ?? undefined);
   const [ratingCount, setRatingCount] = useState(recipe.rating_count);
   const [imageExpanded, setImageExpanded] = useState(false);
@@ -120,6 +121,16 @@ export default function RecipeDetail({ recipe, onUpdate, onEdit, onDelete, isAdm
               </div>
             )}
           </>
+        )}
+
+        {/* Back button — mobile only */}
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="md:hidden flex items-center gap-1.5 text-sm text-brand-muted hover:text-brand-accent mb-4 transition-colors"
+          >
+            ← חזרה לרשימה
+          </button>
         )}
 
         {/* Header card */}

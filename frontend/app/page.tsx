@@ -20,6 +20,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mobileView, setMobileView] = useState<"list" | "detail">("list");
 
   // Admin modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -57,6 +58,7 @@ export default function Home() {
 
   const handleSelectRecipe = async (id: string) => {
     setActiveId(id);
+    setMobileView("detail");
     setDetailLoading(true);
     try {
       const r = await fetchRecipe(id);
@@ -99,6 +101,7 @@ export default function Home() {
     setActiveId(null);
     setActiveRecipe(null);
     setDeleteConfirm(false);
+    setMobileView("list");
     await loadRecipes();
   };
 
@@ -144,6 +147,7 @@ export default function Home() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-brand-bg">
+      <div className={`${mobileView === "detail" ? "hidden md:flex" : "flex"} w-full md:w-auto`}>
       <Sidebar
         recipes={recipes}
         labels={labels}
@@ -157,8 +161,9 @@ export default function Home() {
         onClearFilters={() => setActiveLabelIds([])}
         onDeleteLabel={IS_ADMIN && isLocal ? handleDeleteLabel : undefined}
       />
+      </div>
 
-      <main className="flex-1 overflow-hidden p-6 relative">
+      <main className={`flex-1 overflow-hidden p-6 relative ${mobileView === "list" ? "hidden md:block" : ""}`}>
         {detailLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className="animate-pulse text-brand-muted font-semibold">טוען...</div>
@@ -170,6 +175,7 @@ export default function Home() {
             isAdmin={IS_ADMIN}
             onEdit={openEditModal}
             onDelete={() => setDeleteConfirm(true)}
+            onBack={() => setMobileView("list")}
           />
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-center">
