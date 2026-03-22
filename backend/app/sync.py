@@ -13,6 +13,51 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 
+async def get_diff() -> dict:
+    """Returns diff between local and production."""
+    if not settings.prod_database_url:
+        return {"to_add": [], "to_update": [], "to_delete": []}
+    local = await asyncpg.connect(settings.database_url)
+    prod  = await asyncpg.connect(settings.prod_database_url)
+    try:
+        local_rows = await local.fetch("SELECT id, name, updated_at FROM recipes")
+        prod_rows  = await prod.fetch("SELECT id, name, updated_at FROM recipes")
+        local_map = {str(r["id"]): r for r in local_rows}
+        prod_map  = {str(r["id"]): r for r in prod_rows}
+        return {
+            "to_add":    [{"id": rid, "name": r["name"]} for rid, r in local_map.items() if rid not in prod_map],
+            "to_update": [{"id": rid, "name": r["name"]} for rid, r in local_map.items() if rid in prod_map and r["updated_at"] > prod_map[rid]["updated_at"]],
+            "to_delete": [{"id": rid, "name": r["name"]} for rid, r in prod_map.items() if rid not in local_map],
+        }
+    finally:
+        await local.close()
+        await prod.close()
+
+
+async def sync_selected(add: list[str], update: list[str], delete: list[str]) -> None:
+    """Sync only selected recipe IDs to production."""
+    if not settings.prod_database_url:
+        return
+    local = await asyncpg.connect(settings.database_url)
+    prod  = await asyncpg.connect(settings.prod_database_url)
+    try:
+        label_map = await _sync_labels(local, prod)
+        for rid in delete:
+            await prod.execute("DELETE FROM recipes WHERE id = $1::uuid", rid)
+        all_ids = add + update
+        if all_ids:
+            rows = await local.fetch("SELECT * FROM recipes WHERE id = ANY($1::uuid[])", all_ids)
+            for r in rows:
+                rid = str(r["id"])
+                if rid in add:
+                    await _insert_recipe(local, prod, r, label_map)
+                else:
+                    await _update_recipe(local, prod, r, label_map)
+    finally:
+        await local.close()
+        await prod.close()
+
+
 async def sync_to_production() -> None:
     if not settings.prod_database_url:
         return

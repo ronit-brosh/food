@@ -5,10 +5,10 @@ stack_name = "food-backend"
 resolve_s3 = true
 s3_prefix = "food-backend"
 region = "eu-central-1"
-confirm_changeset = true
+confirm_changeset = false
 capabilities = "CAPABILITY_IAM"
 disable_rollback = true
-parameter_overrides = "AllowedOrigins=\"*\""
+parameter_overrides = "AllowedOrigins=\"https://recipes.r-on-it.com,http://localhost:3010\""
 image_repositories = []
 
 [default.global.parameters]

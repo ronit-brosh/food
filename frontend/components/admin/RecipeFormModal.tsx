@@ -6,6 +6,7 @@ import {
   parseRecipeFromUrl, parseRecipeFromImage, parseRecipeFromText,
 } from "@/lib/api";
 import { X, Loader2, Link, ImageIcon, PenLine, Plus, ClipboardPaste } from "lucide-react";
+import ImagePicker from "./ImagePicker";
 
 interface FormData {
   name: string;
@@ -60,6 +61,7 @@ function parsedToForm(p: ParsedRecipe, availableLabels: Label[]): FormData {
 interface RecipeFormModalProps {
   recipe?: Recipe;           // if set → edit mode
   labels: Label[];
+  autoSync?: boolean;
   onSave: (recipe: Recipe) => void;
   onClose: () => void;
   onLabelsChange: (labels: Label[]) => void;
@@ -68,7 +70,7 @@ interface RecipeFormModalProps {
 type Mode = "manual" | "url" | "image" | "text";
 
 export default function RecipeFormModal({
-  recipe, labels, onSave, onClose, onLabelsChange,
+  recipe, labels, autoSync = true, onSave, onClose, onLabelsChange,
 }: RecipeFormModalProps) {
   const isEdit = !!recipe;
   const [mode, setMode] = useState<Mode>(isEdit ? "manual" : "manual");
@@ -86,6 +88,7 @@ export default function RecipeFormModal({
 
   const [newLabelInput, setNewLabelInput] = useState("");
   const [addingLabel, setAddingLabel] = useState(false);
+  const isLocal = typeof window !== "undefined" && window.location.hostname === "localhost";
 
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -189,8 +192,8 @@ export default function RecipeFormModal({
         label_ids: form.label_ids,
       };
       const saved = isEdit
-        ? await updateRecipe(recipe.id, payload)
-        : await createRecipe(payload);
+        ? await updateRecipe(recipe.id, payload, autoSync)
+        : await createRecipe(payload, autoSync);
       onSave(saved);
     } catch (e: any) {
       setSaveError(e.message ?? "שגיאה בשמירה");
@@ -333,6 +336,16 @@ export default function RecipeFormModal({
                 </div>
               )}
 
+              {!isEdit && (
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, ingredients: "בקרוב...", instructions: "בקרוב..." }))}
+                  className="text-xs text-brand-muted hover:text-brand-accent underline text-right"
+                >
+                  מלא שדות חובה ב"בקרוב"
+                </button>
+              )}
+
               <Field label="שם המתכון *">
                 <input
                   value={form.name}
@@ -343,19 +356,21 @@ export default function RecipeFormModal({
               </Field>
 
               <div className="grid grid-cols-2 gap-3">
-                <Field label="זמן הכנה (דק׳)">
+                <Field label="זמן הכנה (דק׳) — אופציונלי">
                   <input
                     type="number" min={0}
                     value={form.prep_time_minutes}
                     onChange={(e) => setField("prep_time_minutes", e.target.value)}
+                    placeholder="—"
                     className={inputCls}
                   />
                 </Field>
-                <Field label="מנות">
+                <Field label="מנות — אופציונלי">
                   <input
                     type="number" min={0}
                     value={form.servings}
                     onChange={(e) => setField("servings", e.target.value)}
+                    placeholder="—"
                     className={inputCls}
                   />
                 </Field>
@@ -399,13 +414,21 @@ export default function RecipeFormModal({
                     className={inputCls}
                   />
                 </Field>
-                <Field label="קישור תמונה">
-                  <input
-                    value={form.image_url}
-                    onChange={(e) => setField("image_url", e.target.value)}
-                    placeholder="https://..."
-                    className={inputCls}
-                  />
+                <Field label="תמונה">
+                  {isLocal ? (
+                    <ImagePicker
+                      value={form.image_url}
+                      onChange={(url) => setField("image_url", url)}
+                      inputCls={inputCls}
+                    />
+                  ) : (
+                    <input
+                      value={form.image_url}
+                      onChange={(e) => setField("image_url", e.target.value)}
+                      placeholder="https://..."
+                      className={inputCls}
+                    />
+                  )}
                 </Field>
               </div>
 

@@ -5,6 +5,7 @@ import { fetchRecipes, fetchRecipe, fetchLabels, deleteRecipe, deleteLabel } fro
 import Sidebar from "@/components/Sidebar";
 import RecipeDetail from "@/components/RecipeDetail";
 import RecipeFormModal from "@/components/admin/RecipeFormModal";
+import SyncDialog from "@/components/SyncDialog";
 import { Plus } from "lucide-react";
 
 const IS_ADMIN = process.env.NEXT_PUBLIC_ADMIN_MODE === "true";
@@ -26,6 +27,11 @@ export default function Home() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | undefined>(undefined);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
+  const [autoSync, setAutoSync] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem("autoSync") !== "false";
+  });
 
   const loadRecipes = useCallback(async () => {
     try {
@@ -95,9 +101,14 @@ export default function Home() {
     setActiveRecipe(saved);
   };
 
+  const handleAutoSyncChange = (val: boolean) => {
+    setAutoSync(val);
+    localStorage.setItem("autoSync", String(val));
+  };
+
   const handleDelete = async () => {
     if (!activeRecipe) return;
-    await deleteRecipe(activeRecipe.id);
+    await deleteRecipe(activeRecipe.id, autoSync);
     setActiveId(null);
     setActiveRecipe(null);
     setDeleteConfirm(false);
@@ -155,6 +166,9 @@ export default function Home() {
         sort={sort}
         activeLabelIds={activeLabelIds}
         isAdmin={IS_ADMIN}
+        autoSync={autoSync}
+        onAutoSyncChange={isLocal && IS_ADMIN ? handleAutoSyncChange : undefined}
+        onOpenSyncDialog={() => setSyncDialogOpen(true)}
         onSelectRecipe={handleSelectRecipe}
         onSortChange={setSort}
         onToggleLabel={handleToggleLabel}
@@ -202,11 +216,15 @@ export default function Home() {
         <RecipeFormModal
           recipe={editingRecipe}
           labels={labels}
+          autoSync={autoSync}
           onSave={handleModalSave}
           onClose={() => { setModalOpen(false); setEditingRecipe(undefined); }}
           onLabelsChange={setLabels}
         />
       )}
+
+      {/* Sync dialog */}
+      {syncDialogOpen && <SyncDialog onClose={() => setSyncDialogOpen(false)} />}
 
       {/* Delete confirm */}
       {IS_ADMIN && deleteConfirm && (

@@ -1,4 +1,6 @@
 from fastapi import APIRouter, HTTPException
+import boto3
+import uuid as uuid_lib
 from pydantic import BaseModel
 from typing import Optional
 import httpx
@@ -6,6 +8,7 @@ import anthropic
 import base64
 import json
 from app.config import settings
+from app.sync import get_diff, sync_selected
 
 router = APIRouter()
 
@@ -52,6 +55,60 @@ Use the EXACT spelling from the known list:
 {json.dumps(KNOWN_LABELS, ensure_ascii=False)}
 
 No markdown, no explanation — JSON only."""
+
+
+class DiffItem(BaseModel):
+    id: str
+    name: str
+
+class DiffResult(BaseModel):
+    to_add: list[DiffItem]
+    to_update: list[DiffItem]
+    to_delete: list[DiffItem]
+
+class SyncSelectedRequest(BaseModel):
+    add: list[str] = []
+    update: list[str] = []
+    delete: list[str] = []
+
+@router.get("/diff", response_model=DiffResult)
+async def diff_endpoint():
+    return await get_diff()
+
+@router.post("/sync-selected", status_code=204)
+async def sync_selected_endpoint(req: SyncSelectedRequest):
+    await sync_selected(req.add, req.update, req.delete)
+
+
+class UploadUrlResponse(BaseModel):
+    upload_url: str
+    image_url: str
+
+@router.get("/list-images")
+async def list_images():
+    s3 = boto3.client("s3", region_name=settings.aws_region)
+    resp = s3.list_objects_v2(Bucket=settings.aws_s3_bucket, Prefix=settings.aws_s3_prefix + "/")
+    items = []
+    for obj in resp.get("Contents", []):
+        key = obj["Key"]
+        if key.endswith("/"):
+            continue
+        url = f"https://{settings.aws_s3_bucket}.s3.{settings.aws_region}.amazonaws.com/{key}"
+        items.append({"key": key, "url": url, "name": key.split("/")[-1]})
+    return items
+
+
+@router.get("/upload-image-url", response_model=UploadUrlResponse)
+async def get_upload_url(filename: str, content_type: str = "image/jpeg"):
+    key = f"{settings.aws_s3_prefix}/{filename}"
+    s3 = boto3.client("s3", region_name=settings.aws_region)
+    upload_url = s3.generate_presigned_url(
+        "put_object",
+        Params={"Bucket": settings.aws_s3_bucket, "Key": key, "ContentType": content_type},
+        ExpiresIn=300,
+    )
+    image_url = f"https://{settings.aws_s3_bucket}.s3.{settings.aws_region}.amazonaws.com/{key}"
+    return {"upload_url": upload_url, "image_url": image_url}
 
 
 @router.post("/parse", response_model=ParsedRecipe)

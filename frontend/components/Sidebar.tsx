@@ -12,6 +12,9 @@ interface SidebarProps {
   sort: SortOption;
   activeLabelIds: number[];
   isAdmin?: boolean;
+  autoSync?: boolean;
+  onAutoSyncChange?: (val: boolean) => void;
+  onOpenSyncDialog?: () => void;
   onSelectRecipe: (id: string) => void;
   onSortChange: (sort: SortOption) => void;
   onToggleLabel: (id: number) => void;
@@ -26,6 +29,9 @@ export default function Sidebar({
   sort,
   activeLabelIds,
   isAdmin,
+  autoSync,
+  onAutoSyncChange,
+  onOpenSyncDialog,
   onSelectRecipe,
   onSortChange,
   onToggleLabel,
@@ -142,9 +148,27 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* Count */}
-      <div className="px-4 py-2 border-t border-brand-border text-xs text-brand-muted text-center bg-brand-surface">
-        {filtered.length} מתכונים
+      {/* Count + sync controls */}
+      <div className="px-4 py-2 border-t border-brand-border text-xs text-brand-muted bg-brand-surface">
+        <div className="text-center mb-1">{filtered.length} מתכונים</div>
+        {onAutoSyncChange && (
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-1.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={autoSync}
+                onChange={(e) => onAutoSyncChange(e.target.checked)}
+                className="accent-brand-accent"
+              />
+              סינכרון אוטומטי
+            </label>
+            {!autoSync && (
+              <button onClick={onOpenSyncDialog} className="text-brand-accent hover:underline font-semibold">
+                הפץ
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </aside>
   );

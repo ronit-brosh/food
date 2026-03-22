@@ -21,15 +21,19 @@ Parameters:
     NoEcho: true
   AllowedOrigins:
     Type: String
-    Default: "*"
+    Default: "https://recipes.r-on-it.com,http://localhost:3010"
 
 Resources:
   RecipesApi:
     Type: AWS::Serverless::HttpApi
     Properties:
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 20
+        ThrottlingRateLimit: 10
       CorsConfiguration:
         AllowOrigins:
-          - "*"
+          - "https://recipes.r-on-it.com"
+          - "http://localhost:3010"
         AllowMethods:
           - GET
           - POST
